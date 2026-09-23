@@ -43,8 +43,9 @@ def build_script_md(turns: list[dict]) -> str:
 
 
 def run(article_path: str, out_dir: str, cfg: dict, no_tts: bool = False,
-        use_script: bool = False) -> dict:
-    """主流程。返回统计信息。"""
+        use_script: bool = False, tone: str | None = None,
+        host_voice: str | None = None, author_voice: str | None = None) -> dict:
+    """主流程。tone 注入对话稿语气；host_voice/author_voice 覆盖 TTS 音色（GUI 传参）。"""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
@@ -66,7 +67,7 @@ def run(article_path: str, out_dir: str, cfg: dict, no_tts: bool = False,
         turns = llm.validate(json.loads(script_json.read_text(encoding="utf-8")))
         print(f"[script] 使用现有 {script_json.name}（{len(turns)} 轮，跳过 LLM）")
     else:
-        turns = llm.generate(cfg, article)
+        turns = llm.generate(cfg, article, tone=tone)
         script_json.write_text(json.dumps(turns, ensure_ascii=False, indent=2), encoding="utf-8")
         n_h = sum(1 for t in turns if t["role"] == "host")
         print(f"[script] 对话稿 {len(turns)} 轮（host {n_h} / author {len(turns) - n_h}）")
@@ -81,9 +82,12 @@ def run(article_path: str, out_dir: str, cfg: dict, no_tts: bool = False,
 
     # 3. 双音色配音
     tts_cfg = cfg["tts"]
-    provider = tts.build(cfg)
-    print(f"[tts] {tts_cfg['provider']} 双音色（host={tts_cfg['host_voice']}, "
-          f"author={tts_cfg['author_voice']}）并发 {cfg['concurrency']['tts_workers']} 线程…")
+    provider = tts.build(cfg, host_voice=host_voice, author_voice=author_voice)
+    hv = host_voice or tts_cfg.get("host_voice", "")
+    av = author_voice or tts_cfg.get("author_voice", "")
+    print(f"[tts] {tts_cfg['provider']} 双音色（host={hv}, author={av}）"
+          f"并发 {cfg['concurrency']['tts_workers']} 线程…"
+          + (f"，语气={tone}" if tone else ""))
     work = out_dir / ".voice"
     work.mkdir(exist_ok=True)
     items = [(i, t["role"], t["text"], str(work / f"v{i:03d}.mp3")) for i, t in enumerate(turns)]

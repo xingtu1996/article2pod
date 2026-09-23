@@ -17,21 +17,33 @@ from . import config as config_mod
 ROLES = ("host", "author")
 
 
-def load_prompt(cfg: dict) -> tuple[str, str]:
-    """返回 (渲染后的 prompt, 指纹)。指纹 = 模板内容 hash + max_turns，进缓存键。"""
+TONE_TEXT = {
+    "natural": "像朋友在咖啡馆聊天：松弛、自然、有来有回，不端着。",
+    "lively": "活泼轻快：节奏快、情绪上扬、多用语气词（哇/诶/真的假的），偶尔开个小玩笑。",
+    "serious": "沉稳专业：克制、理性、少修辞，数字和逻辑优先，不煽情。",
+    "cute": "可爱萌系：语气软糯，允许叠词与拟声（嘿嘿/咕咕），但观点依然清晰不卖萌水话。",
+    "story": "讲故事：叙述感强、有画面感、关键处留悬念，像深夜电台讲一个真实经历。",
+}
+
+
+def load_prompt(cfg: dict, tone: str | None = None) -> tuple[str, str]:
+    """返回 (渲染后的 prompt, 指纹)。指纹 = 模板内容 hash + max_turns + tone，进缓存键。"""
     p = config_mod.prompt_path(cfg)
     body = p.read_text(encoding="utf-8")
-    rendered = body.replace("{max_turns}", str(cfg["limits"]["max_turns"]))
-    fp = hashlib.sha256(f"{body}|{cfg['limits']['max_turns']}".encode()).hexdigest()[:16]
+    tone = tone or "natural"
+    tone_text = TONE_TEXT.get(tone, TONE_TEXT["natural"])
+    rendered = (body.replace("{max_turns}", str(cfg["limits"]["max_turns"]))
+                .replace("{tone}", tone_text))
+    fp = hashlib.sha256(f"{body}|{cfg['limits']['max_turns']}|{tone}".encode()).hexdigest()[:16]
     return rendered, fp
 
 
-def generate(cfg: dict, article: str) -> list[dict]:
+def generate(cfg: dict, article: str, tone: str | None = None) -> list[dict]:
     """调用本地 Ollama 生成对话稿。失败抛错（不静默降级——没模型的对话稿毫无意义）。"""
     llm = cfg["llm"]
     if llm["provider"] != "ollama":
         raise RuntimeError(f"llm.provider={llm['provider']} 不支持对话稿生成（需要 ollama）")
-    prompt, fp = load_prompt(cfg)
+    prompt, fp = load_prompt(cfg, tone)
     rendered = prompt.replace("{article}", article)
     payload = {
         "model": llm["model"],

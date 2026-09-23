@@ -24,8 +24,51 @@ def _duration(p: str) -> float:
         return 3.0
 
 
+# edge-tts 中文音色表（微软免费档，2026-09-23 实测：仅下表 6 个音色可用）。
+# ⚠️ 曾列入的晓梦/晓涵/晓辰/云野/云枫/云杰实测返回 NoAudioReceived（服务端无此音色），已剔除。
+# 集成新的本地开源 TTS（ChatTTS/CosyVoice 等）后，这里会扩展出更自然的音色。
+EDGE_VOICES = [
+    {"id": "zh-CN-XiaoxiaoNeural", "name": "晓晓", "gender": "女", "desc": "温暖清晰，默认主持人", "cute": False},
+    {"id": "zh-CN-XiaoyiNeural", "name": "晓伊", "gender": "女", "desc": "活泼少女感，可爱首选", "cute": True},
+    {"id": "zh-CN-XiaoxuanNeural", "name": "晓萱", "gender": "女", "desc": "干练女声", "cute": False},
+    {"id": "zh-CN-YunxiNeural", "name": "云希", "gender": "男", "desc": "阳光青年，默认作者", "cute": False},
+    {"id": "zh-CN-YunjianNeural", "name": "云健", "gender": "男", "desc": "沉稳磁性", "cute": False},
+    {"id": "zh-CN-YunyangNeural", "name": "云扬", "gender": "男", "desc": "新闻播报感", "cute": False},
+]
+
+
+# 音色组合预置（GUI「选组合」）。host/author 取 EDGE_VOICES 的 id。
+VOICE_PRESETS = [
+    {"id": "default", "name": "知性访谈", "desc": "晓晓(女)+云希(男)，清晰对谈，默认",
+     "host": "zh-CN-XiaoxiaoNeural", "author": "zh-CN-YunxiNeural"},
+    {"id": "cute", "name": "萌系对谈", "desc": "晓伊(女)+云希(男)，活泼可爱风",
+     "host": "zh-CN-XiaoyiNeural", "author": "zh-CN-YunxiNeural"},
+    {"id": "deep", "name": "沉稳深谈", "desc": "云健(男)+云希(男)，深夜电台质感",
+     "host": "zh-CN-YunjianNeural", "author": "zh-CN-YunxiNeural"},
+    {"id": "warm", "name": "温暖陪伴", "desc": "晓晓(女)+云健(男)，温柔治愈向",
+     "host": "zh-CN-XiaoxiaoNeural", "author": "zh-CN-YunjianNeural"},
+    {"id": "news", "name": "新闻质感", "desc": "云扬(男)+云希(男)，信息密度高",
+     "host": "zh-CN-YunyangNeural", "author": "zh-CN-YunxiNeural"},
+]
+
+
+# 语气（GUI「选语气」，注入对话稿 prompt 的 {tone}）
+TONES = [
+    {"id": "natural", "name": "自然口语", "desc": "像朋友聊天（默认）"},
+    {"id": "lively", "name": "活泼轻快", "desc": "节奏快、情绪上扬、多语气词"},
+    {"id": "serious", "name": "沉稳专业", "desc": "克制、理性、少修辞"},
+    {"id": "cute", "name": "可爱萌系", "desc": "语气软糯、多叠词与拟声"},
+    {"id": "story", "name": "讲故事", "desc": "叙述感强、有画面、留悬念"},
+]
+
+
 class EdgeTTSProvider:
     """edge-tts 双音色：每句按 role 选 voice（host_voice / author_voice）。"""
+
+    @classmethod
+    def voices(cls) -> list[dict]:
+        """可用音色列表（GUI 音色选择器）。"""
+        return EDGE_VOICES
 
     def __init__(self, host_voice: str, author_voice: str, timeout: float = 45.0):
         self.voices = {"host": host_voice, "author": author_voice}
@@ -105,6 +148,13 @@ class EdgeTTSProvider:
 class SayProvider:
     """macOS say 本地兜底（断网可跑）。双音色：host=婷婷, author=阿亮（中文变体）。"""
 
+    @classmethod
+    def voices(cls) -> list[dict]:
+        return [
+            {"id": "Tingting", "name": "婷婷", "gender": "女", "desc": "macOS 本地", "cute": False},
+            {"id": "Liang", "name": "阿亮", "gender": "男", "desc": "macOS 本地", "cute": False},
+        ]
+
     def __init__(self):
         self.voices = {"host": "Tingting", "author": "Liang"}
 
@@ -129,10 +179,20 @@ class SayProvider:
         return results
 
 
-def build(cfg: dict):
-    """按 config 造 TTS provider。"""
+def build(cfg: dict, host_voice: str | None = None, author_voice: str | None = None):
+    """按 config 造 TTS provider。host_voice/author_voice 非空则覆盖配置（GUI 传参）。"""
     tts_cfg = cfg["tts"]
+    hv = host_voice or tts_cfg.get("host_voice")
+    av = author_voice or tts_cfg.get("author_voice")
     if tts_cfg["provider"] == "edge":
-        return EdgeTTSProvider(tts_cfg["host_voice"], tts_cfg["author_voice"],
+        return EdgeTTSProvider(hv or "zh-CN-XiaoxiaoNeural", av or "zh-CN-YunxiNeural",
                                timeout=tts_cfg.get("timeout", 45.0))
     return SayProvider()
+
+
+def list_providers() -> list[dict]:
+    """GUI 引擎选择：当前已实现的 TTS 引擎。集成新的本地开源 TTS 时在这里注册。"""
+    return [
+        {"id": "edge", "name": "edge-tts（免费在线）", "desc": "微软免费档，12 个中文音色，需网"},
+        {"id": "say", "name": "macOS say（本地）", "desc": "断网可跑，仅 2 个中文音色"},
+    ]

@@ -5,7 +5,7 @@ import argparse
 import sys
 
 from . import config as config_mod
-from . import pipeline
+from . import llm, pipeline
 
 
 def main(argv=None) -> int:
@@ -20,6 +20,10 @@ def main(argv=None) -> int:
     ap.add_argument("--use-script", action="store_true",
                     help="输出目录已有 script.json 时跳过 LLM，直接用它合成（人工改稿后的标准路径）")
     ap.add_argument("--fast", action="store_true", help="关闭 LLM 思考模式，加快生成（质量略降）")
+    ap.add_argument("--host-voice", default=None, help="主持人音色 id（默认 config）")
+    ap.add_argument("--author-voice", default=None, help="作者音色 id（默认 config）")
+    ap.add_argument("--tone", default=None, choices=list(llm.TONE_TEXT.keys()),
+                    help="语气：natural/lively/serious/cute/story（默认 natural）")
     args = ap.parse_args(argv)
 
     cfg = config_mod.load(args.config)
@@ -28,7 +32,8 @@ def main(argv=None) -> int:
 
     try:
         stat = pipeline.run(args.article, args.out, cfg, no_tts=args.no_tts,
-                            use_script=args.use_script)
+                            use_script=args.use_script, tone=args.tone,
+                            host_voice=args.host_voice, author_voice=args.author_voice)
     except Exception as e:
         print(f"[error] {e}", file=sys.stderr)
         return 1

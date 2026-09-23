@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>article2pod · 文章转播客</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>article2pod <span class="sub">文章 → 双人对话播客</span></h1>
+    <div class="env" id="env"></div>
+  </header>
+
+  <main>
+    <!-- 左：配置 -->
+    <section class="panel config">
+      <h2>① 声音配置</h2>
+
+      <div class="field">
+        <label>引擎</label>
+        <select id="provider"></select>
+        <p class="hint" id="provider-hint"></p>
+      </div>
+
+      <div class="field">
+        <label>组合预置</label>
+        <div class="presets" id="presets"></div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>主持人音色</label>
+          <select id="host-voice"></select>
+        </div>
+        <div class="field">
+          <label>作者音色 <span class="tag cute-tag">可爱</span></label>
+          <select id="author-voice"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>语气</label>
+        <div class="tones" id="tones"></div>
+      </div>
+    </section>
+
+    <!-- 中：文章 -->
+    <section class="panel article">
+      <h2>② 文章</h2>
+      <div class="upload" id="upload">
+        <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
+        <p class="drop-tip">点击或拖拽上传 Markdown 文章</p>
+        <p class="hint">或直接填本地路径</p>
+        <input type="text" id="path-input" placeholder="/Users/.../文章.md">
+        <button id="use-path" class="ghost">使用该路径</button>
+      </div>
+      <div class="file-info" id="file-info"></div>
+    </section>
+
+    <!-- 右：生成 -->
+    <section class="panel run">
+      <h2>③ 生成</h2>
+      <button id="generate" class="primary" disabled>生成播客</button>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <p class="step" id="step"></p>
+      </div>
+      <div class="logs" id="logs"></div>
+      <div class="result" id="result" hidden>
+        <h3>成品</h3>
+        <audio id="player" controls></audio>
+        <div class="downloads" id="downloads"></div>
+        <p class="meta" id="meta"></p>
+      </div>
+    </section>
+  </main>
+
+  <section class="panel history">
+    <h2>历史成品</h2>
+    <div id="history"></div>
+  </section>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

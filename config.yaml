@@ -1,0 +1,40 @@
+# article2pod 配置
+# 派生自 book2vido（文本→视频），本项目只做「文章→双人对话播客」：删画面、LLM 改写对话稿、双音色 TTS、FFmpeg 合成。
+# 零成本理念延续：全程本地跑（ollama + edge-tts 免费档 + ffmpeg），不依赖云 API。
+
+llm:
+  # ollama 本地模型（需先 ollama pull qwen3:8b）| rule（无模型降级，只切句不出对话稿，仅保链路可跑）
+  provider: ollama
+  model: qwen3:8b
+  base_url: http://localhost:11434
+  # 思考模式必须显式声明（qwen3 在 Ollama 里默认开启，不写=行为随模型版本漂移）。
+  # 对话稿保质量 → true；批量初筛要速度 → false 或 CLI --fast。
+  think: true
+  # 提示词资产：null = <项目根>/prompts/podcast_writer.md（文章→对话稿的唯一「模型行为」来源）。
+  # 想试另一版提示词：填绝对路径即可，不改代码。改完会写进 script.json 的 prompt_version/hash 留痕。
+  prompt_file: null
+
+tts:
+  # edge（免费匿名，需网）| say（macOS 完全本地，断网可跑，音色少）
+  provider: edge
+  # 双音色：主持人 + 作者。edge-tts 中文音色任选（voices/ 目录有预览，可用 tools/list_voices.py 枚举）。
+  host_voice: zh-CN-XiaoxiaoNeural    # 主持人（女声，提问/引导/总结）
+  author_voice: zh-CN-YunxiNeural     # 作者（男声，观点/故事/数字，行途第一人称）
+  # 单句超时保护：edge-tts 断网/限流时会静默 hang，超时抛错后由 pipeline 回退 say。
+  timeout: 45.0
+
+limits:
+  # 输入正文上限（字）。超过截断（取开头，可调）。
+  max_chars: 12000
+  # 对话稿轮次上限（host+author 各算一轮）。~30 轮 ≈ 8-12 分钟成品。
+  max_turns: 34
+
+concurrency:
+  # TTS 并发：纯网络 IO 等待，实测高并发收益大；限流自动降并发重试。
+  tts_workers: 8
+
+out:
+  # 输出格式：mp3（兼容最广）| m4a（公众号图文内嵌音频推荐）| both
+  formats: both
+  # 句间静音（毫秒），让对话有呼吸感。
+  gap_ms: 350

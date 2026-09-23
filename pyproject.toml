@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "article2pod"
+version = "0.1.0"
+description = "文章→播客 零成本流水线：把公众号长文变成双人对话播客"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "pyyaml",
+    "edge-tts",
+]
+
+[project.scripts]
+article2pod = "article2pod.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["article2pod"]

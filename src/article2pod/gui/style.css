@@ -38,6 +38,15 @@ main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .hint { font-size: 11px; color: var(--gray); margin-top: 4px; }
 
+/* 音色下拉 + 试听按钮同行 */
+.voice-row { display: flex; gap: 6px; align-items: center; }
+.voice-row select { flex: 1; }
+.preview-btn {
+  flex: none; width: 34px; padding: 7px 0; text-align: center;
+  background: #f2f2f0; color: var(--ink); border: 1px solid var(--line);
+}
+.preview-btn:hover { background: #eaeae6; }
+
 .presets { display: grid; gap: 8px; }
 .preset {
   padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer;

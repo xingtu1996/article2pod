@@ -33,6 +33,7 @@ from ..config import DEFAULT_CONFIG, ROOT, load
 GUI_DIR = Path(__file__).parent
 UPLOAD_DIR = ROOT / "uploads"
 OUT_ROOT = ROOT / "demo"
+VOICES_PREVIEW_DIR = ROOT / "voices_preview"  # 音色试听预生成 mp3
 
 _jobs: dict = {}
 _job_lock = threading.Lock()
@@ -137,6 +138,17 @@ class GuiHandler(BaseHTTPRequestHandler):
                 "tones": tts.TONES,
                 "providers": tts.list_providers(),
             })
+            return
+
+        # 音色试听预览：流式返回预生成的 mp3。
+        # 防目录穿越——voice_id 必须在 EDGE_VOICES 白名单内，其余一律 404。
+        if path.startswith("/api/voices/preview/"):
+            voice_id = path[len("/api/voices/preview/"):]
+            valid_ids = {v["id"] for v in tts.EDGE_VOICES}
+            if voice_id not in valid_ids:
+                self._json({"ok": False, "error": "未知音色"}, 404)
+                return
+            self._file(VOICES_PREVIEW_DIR / f"{voice_id}.mp3", "audio/mpeg")
             return
 
         # 环境检查

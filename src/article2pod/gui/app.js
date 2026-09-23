@@ -68,6 +68,37 @@ function fillVoices() {
   $("author-voice").value = "zh-CN-YunxiNeural";
   $("host-voice").onchange = clearPreset;
   $("author-voice").onchange = clearPreset;
+  // 绑定两个下拉旁的试听按钮
+  bindPreview("host-voice", "host-preview");
+  bindPreview("author-voice", "author-preview");
+}
+
+/* ── 音色试听（预生成 mp3，全局单个 Audio，点新试听先停上一个）── */
+let previewAudio = null;
+let previewBtn = null;
+
+function stopPreview() {
+  if (previewAudio) { previewAudio.pause(); previewAudio.currentTime = 0; }
+  if (previewBtn) previewBtn.textContent = "▶";
+  previewAudio = null;
+  previewBtn = null;
+}
+
+function bindPreview(selectId, btnId) {
+  const btn = $(btnId);
+  btn.onclick = () => {
+    // 正在播放时再点同一个按钮 = 停止
+    if (previewBtn === btn && previewAudio) { stopPreview(); return; }
+    stopPreview();
+    const voiceId = $(selectId).value;
+    previewAudio = new Audio(`/api/voices/preview/${encodeURIComponent(voiceId)}`);
+    previewBtn = btn;
+    btn.textContent = "⏸";
+    // 播完 / 出错都复位按钮状态
+    previewAudio.onended = stopPreview;
+    previewAudio.onerror = stopPreview;
+    previewAudio.play().catch(stopPreview);
+  };
 }
 
 function clearPreset() {

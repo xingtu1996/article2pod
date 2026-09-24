@@ -11,3 +11,6 @@ dist/
 
 # 系统
 .DS_Store
+
+# CosyVoice demo（6.6G 模型与产物，不入库）
+demo/cosyvoice_demo/

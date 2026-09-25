@@ -119,6 +119,17 @@ article2pod/
 └── voices/                  # 音色预览
 ```
 
+## 关于作者
+
+我是**行途**，一线技术人 + 仍在写代码。这套「文章→播客」流水线来自我把公众号长文转成双人对话播客的真实需求——不烧 API、本地跑完，单集成本约 ¥0.0005。
+
+- 🔔 公众号 **「行途技术手记」**：微信搜索关注，看 AI 工程化落地实战
+- 🐙 GitHub：[@xingtu1996](https://github.com/xingtu1996)
+- 📦 仓库：[xingtu1996/article2pod](https://github.com/xingtu1996/article2pod)
+
+---
+
+
 ## License
 
 MIT

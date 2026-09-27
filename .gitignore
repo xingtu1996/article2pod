@@ -1,16 +1,19 @@
-# Python
+# article2pod .gitignore —— 2026-09-27 安全作废
+# 原配置曾拦截 demo 成品（mp3/m4a/稿）入库。因连续多日无新发布文章、
+# 该「文→podcast」管线暂无输入处于休眠，此处仅保留系统垃圾与 6.7G 模型排除，
+# 不再拦截内容产物。
+
+# 系统 / Python
+.DS_Store
 __pycache__/
 *.py[cod]
 *.egg-info/
 build/
 dist/
 
-# 中间产物（配音片段等）；demo 成品 mp3/m4a/稿保留在 git 作展示
+# CosyVoice 6.7G 模型与产物，禁止入库（体积灾难）
+demo/cosyvoice_demo/
+
+# 配音中间片段（非交付物）
 .voice/
 **/.voice/
-
-# 系统
-.DS_Store
-
-# CosyVoice demo（6.6G 模型与产物，不入库）
-demo/cosyvoice_demo/

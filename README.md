@@ -38,23 +38,69 @@ flowchart LR
     style C fill:#F2644F,color:#fff,stroke:#1A1A1A
 ```
 
-## 快速开始
+## 安装与快速开始
+
+### 前置条件
+
+| 依赖 | 必需 | 干什么用 | 怎么确认 | 怎么装 |
+|---|---|---|---|---|
+| Python ≥ 3.10 | ✅ | 跑代码 | `python3 --version` | 系统自带 / python.org |
+| `ffmpeg` + `ffprobe` | ✅ | 合成音频、回读时长 | `ffmpeg -version` | macOS `brew install ffmpeg`；Debian/Ubuntu `apt install ffmpeg` |
+| `ollama` + `qwen3:8b` | 推荐（不要就是降级路径） | 写「双人访谈」对话稿 | `ollama list` 里有 `qwen3:8b` | `brew install ollama` 后 `ollama pull qwen3:8b` |
+| `edge-tts` | ✅（pip 自动装） | 配音，免费匿名但要联网 | `pip show edge-tts` | 随 `pip install -e .` 装 |
+| macOS `say` | 兜底 | 断网/限流时本地配音 | `which say` | macOS 自带 |
+
+### 三条命令跑通
 
 ```bash
-# 1. 依赖：本地 LLM（可选但推荐）+ edge-tts + ffmpeg
-ollama pull qwen3:8b
-pip3 install -e .
-# ffmpeg 请按平台安装
-
-# 2. 生成：默认出「对话稿 + mp3 + m4a」
-article2pod 你的文章.md -o demo/out
-
-# 只出对话稿先审稿（推荐流程）：
-article2pod 你的文章.md -o demo/out --no-tts
-
-# 人工改完对话稿后，跳过 LLM 直接重合成：
-article2pod 你的文章.md -o demo/out --use-script
+python3 -m venv .venv && source .venv/bin/activate   # 1. 建环境
+pip install -e .                                      # 2. 装依赖（含 article2pod 命令）
+article2pod demo/samples/sample_article.md -o demo/out # 3. 出播客
 ```
+
+第 3 条默认产出「对话稿 + mp3 + m4a」三件套。仓库自带一篇示例文章 `demo/samples/sample_article.md`，装完就能跑，不用自己找素材。
+
+### 两条路径：要不要 ollama
+
+| | 路径 A（推荐） | 路径 B（零依赖降级） |
+|---|---|---|
+| 前置 | `ollama serve` 在跑 + 已 `ollama pull qwen3:8b` | **什么都不要** |
+| 怎么切 | 默认就是（config.yaml `llm.provider: ollama`） | 改 `config.yaml` → `llm.provider: rule` |
+| 产出 | 真正的双人访谈稿：主持人提问、作者讲观点 | **不是对话稿**——作者句为原文照搬，只保证链路能跑通 |
+| 本次实测 | 26 轮 · 音频 142.6 s · mp3 812 KB / m4a 1.45 MB · 耗时 147.9 s | 32 轮 · 音频 187.8 s · mp3 1.01 MB / m4a 1.83 MB · 耗时 21.3 s |
+
+> 口径：同一篇 705 字示例文章，M 系列本机，端到端计时；时长为 `ffprobe format.duration` 回读。你的机器和模型不同，数字会变。
+> 路径 B 存在的意义是「没模型也能验证整条链路」，**出成品请用路径 A**。
+
+### 推荐工作流（先审稿，后合成）
+
+```bash
+article2pod 你的文章.md -o demo/out --no-tts     # 只出对话稿，通读一遍
+# 改 demo/out/script.json（事实瑕疵必须人工核）
+article2pod 你的文章.md -o demo/out --use-script # 用改好的稿重合成，跳过 LLM
+```
+
+### 输入支持范围
+
+目前**只吃本地 UTF-8 纯文本**（`.md` / `.txt` 都行），**不支持 URL/公众号链接/网页抓取**。
+为什么、以及 `article2pod fetch <url>` 的设计方案与选型实测，见 [`doc/BLOG_INPUT_ANALYSIS.md`](doc/BLOG_INPUT_ANALYSIS.md)。
+
+## 常见报错对照表
+
+| 报错 | 真正的原因 | 怎么办 |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'yaml'` | 依赖没装 | `pip install -r requirements.txt`（或 `pip install -e .`） |
+| `command not found: article2pod` | 没装成命令行，或 venv 没激活 | `source .venv/bin/activate` 后 `pip install -e .` |
+| `Ollama 调用失败 … Connection refused` | `ollama serve` 没跑 | 另开一个终端跑 `ollama serve`；或切路径 B |
+| `Ollama 调用失败 … HTTP Error 502` | 服务起来了但模型没拉 / 加载失败 | `ollama pull qwen3:8b`，再 `ollama list` 确认 |
+| `NoAudioReceived`（TTS 日志里的 warn） | edge-tts 服务端限流或音色失效 | 已内置重试 + 自适应降并发；仍失败会自动回退 macOS `say`，成品不受影响。频繁出现就换个音色 |
+| `FileNotFoundError: 提示词资产不存在` | `config.yaml` 的 `llm.prompt_file` 填了错路径 | 填 `null` 用默认 `prompts/podcast_writer.md` |
+| `UnicodeDecodeError` | 文章不是 UTF-8 编码 | 转成 UTF-8 再喂（`iconv -f GBK -t UTF-8 a.txt > b.md`） |
+| `FileNotFoundError: 文章不存在` | 路径写错 / 相对路径基准不对 | 用绝对路径，或先 `pwd` 确认当前目录 |
+| `[error] 合成失败` / `ffmpeg: command not found` | 没装 ffmpeg | `brew install ffmpeg`（Linux 用 apt） |
+| `对话稿必须以 host 开场` / `角色未交替` | 模型没服从 prompt（偶发） | 重跑一次；或 `--no-tts` 出稿后手工改 `script.json` 再 `--use-script` |
+| `[in] 正文 N 字 > 上限 12000` | 长文被**静默截断**（只留开头） | 调大 `config.yaml` 的 `limits.max_chars`，或先自己压一遍 |
+| 裸跑 `pytest` 报 `No module named 'numpy'` | 扫到了 `demo/cosyvoice_demo`（第三方模型仓库） | 已用 `testpaths = ["tests"]` 钉死；直接 `pytest -q` 即可 |
 
 ## Web GUI（本地界面）
 
@@ -116,6 +162,8 @@ article2pod/
 ├── demo/
 │   ├── out_B19/             # 第一篇实测成品（稿 + mp3 + m4a）
 │   └── README.md            # Demo 说明与口径
+├── tests/                   # 冒烟测试（不碰网络/模型/ffmpeg）
+├── doc/                     # 设计分析文档
 └── voices/                  # 音色预览
 ```
 

@@ -38,11 +38,47 @@ def load_prompt(cfg: dict, tone: str | None = None) -> tuple[str, str]:
     return rendered, fp
 
 
+# 规则降级用的主持人串词池（无模型时的兜底，不是对话稿创作）
+RULE_HOST_LINES = [
+    "我们先从一个最根本的问题聊起——这东西到底是怎么来的？",
+    "说得很清楚。接着往下，它具体是怎么跑起来的？",
+    "那落到工程上，最关键的取舍是什么？",
+    "有没有哪个数字能说明这件事的代价？",
+    "最后一句，你想让听的人记住什么？",
+]
+
+
+def _rule_generate(cfg: dict, article: str) -> list[dict]:
+    """无模型降级：把正文切句，主持人串词与作者原句交替。
+
+    只保证链路可跑（审稿/TTS/合成全通），**不产出真正的访谈对话稿**——
+    作者句全部是原文照搬，不做改写、不做提问设计。要成品请用 ollama。
+    """
+    sents = [s.strip() for s in re.split(r"[。！？!?；;\n]+", article) if len(s.strip()) >= 8]
+    if not sents:
+        raise RuntimeError("规则降级失败：正文切不出可用句子（换个长一点的文章）")
+    max_turns = cfg["limits"]["max_turns"]
+    # host+author 成对，最多 max_turns 轮
+    pairs = (max_turns - 1) // 2
+    chunk = max(1, -(-len(sents) // max(1, pairs)))  # 向上取整，合并句子凑够每轮
+    # 先切块再截断，避免 range 走到空切片产出「。」这种空轮
+    blocks = [sents[i:i + chunk] for i in range(0, len(sents), chunk)][:pairs]
+    turns: list[dict] = []
+    for i, block in enumerate(blocks):
+        turns.append({"role": "host",
+                      "text": RULE_HOST_LINES[i] if i < len(RULE_HOST_LINES) else "继续说说。"})
+        turns.append({"role": "author", "text": "。".join(block) + "。"})
+    print("[script] ⚠️ rule 降级：作者句为原文照搬，非访谈对话稿（出成品请用 ollama）")
+    return validate(turns)
+
+
 def generate(cfg: dict, article: str, tone: str | None = None) -> list[dict]:
-    """调用本地 Ollama 生成对话稿。失败抛错（不静默降级——没模型的对话稿毫无意义）。"""
+    """生成对话稿。provider=ollama 走本地模型；rule 为无模型降级（config.yaml 已声明）。"""
     llm = cfg["llm"]
+    if llm["provider"] == "rule":
+        return _rule_generate(cfg, article)
     if llm["provider"] != "ollama":
-        raise RuntimeError(f"llm.provider={llm['provider']} 不支持对话稿生成（需要 ollama）")
+        raise RuntimeError(f"llm.provider={llm['provider']} 不支持对话稿生成（需要 ollama 或 rule）")
     prompt, fp = load_prompt(cfg, tone)
     rendered = prompt.replace("{article}", article)
     payload = {

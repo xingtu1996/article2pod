@@ -6,9 +6,33 @@ import sys
 
 from . import config as config_mod
 from . import llm, pipeline
+from .fetch import fetch_to_md
+
+
+def _fetch_main(argv: list[str]) -> int:
+    """`article2pod fetch <url>`：抓网页正文落 md，落盘后照旧走主流程。"""
+    ap = argparse.ArgumentParser(
+        prog="article2pod fetch",
+        description="抓网页正文 → 本地 md（可选依赖：pip install -r requirements-fetch.txt）",
+    )
+    ap.add_argument("url", help="文章 URL（静态博客最稳；公众号/知乎请人工复制正文存 md）")
+    ap.add_argument("-o", "--out", default="demo/samples", help="md 落盘目录（默认 demo/samples）")
+    args = ap.parse_args(argv)
+    try:
+        p = fetch_to_md(args.url, args.out)
+    except Exception as e:
+        print(f"[error] {e}", file=sys.stderr)
+        return 1
+    print(f"\n✔ 已落盘：{p}\n  下一步：article2pod {p} -o demo/out")
+    return 0
 
 
 def main(argv=None) -> int:
+    # fetch 是子命令，主流程的 positional `article` 保持原样（向后兼容）
+    argv = list(sys.argv[1:]) if argv is None else list(argv)
+    if argv and argv[0] == "fetch":
+        return _fetch_main(argv[1:])
+
     ap = argparse.ArgumentParser(
         prog="article2pod",
         description="文章→播客 零成本流水线：公众号长文 → 双人对话播客（mp3/m4a）",

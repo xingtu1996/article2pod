@@ -1,0 +1,5 @@
+# 开发依赖（CI / 本地贡献者）：先装运行时，再装测试与 lint
+-r requirements.txt
+
+pytest>=7.4
+ruff>=0.4

@@ -162,7 +162,9 @@ class SayProvider:
         aiff = str(out_path).replace(".mp3", ".aiff")
         voice_arg = f"{self.voices[role]} (中文（中国大陆）)"
         subprocess.run(["say", "-v", voice_arg, "-o", aiff, text], check=True)
-        subprocess.run(["ffmpeg", "-nostdin", "-y", "-i", aiff, out_path], check=True)
+        # 兜底路径会为每一句调一次 ffmpeg，不 capture 会把整条管线的日志冲垮
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-i", aiff, out_path],
+                       check=True, capture_output=True)
         p = Path(out_path)
         if not p.exists() or p.stat().st_size == 0:
             raise RuntimeError(f"say→ffmpeg 未产出音频（{out_path}）")

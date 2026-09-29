@@ -9,7 +9,7 @@ import re
 import time
 from pathlib import Path
 
-from . import compose, config as config_mod, llm, tts
+from . import compose, llm, tts
 
 
 def _strip_frontmatter(md: str) -> str:
@@ -92,11 +92,14 @@ def run(article_path: str, out_dir: str, cfg: dict, no_tts: bool = False,
     work.mkdir(exist_ok=True)
     items = [(i, t["role"], t["text"], str(work / f"v{i:03d}.mp3")) for i, t in enumerate(turns)]
     try:
-        durs = provider.speak_many(items, max_workers=cfg["concurrency"]["tts_workers"])
+        provider.speak_many(items, max_workers=cfg["concurrency"]["tts_workers"])
     except Exception as e:
-        print(f"[warn] edge-tts 失败（{e}）——回退 macOS say 本地兜底")
+        # 只补录没出音频的条目：已经合成成功的片段不该被重跑一遍（原实现会把全部条目推翻重来）
+        print(f"[warn] edge-tts 失败（{e}）——未成功的条目回退 macOS say 本地兜底")
+        missing = [it for it in items
+                   if not Path(it[3]).exists() or Path(it[3]).stat().st_size == 0]
         provider = tts.SayProvider()
-        durs = provider.speak_many(items, max_workers=4)
+        provider.speak_many(missing, max_workers=4)
 
     # 4. 合成
     voices = [str(work / f"v{i:03d}.mp3") for i in range(n_turns)]

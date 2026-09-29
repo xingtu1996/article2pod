@@ -1,0 +1,3 @@
+# 可选依赖：只有 `article2pod fetch <url>` 需要，不进主 requirements.txt
+# 安装：pip install -r requirements-fetch.txt
+trafilatura>=1.12

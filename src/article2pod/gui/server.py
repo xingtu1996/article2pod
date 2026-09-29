@@ -21,14 +21,13 @@ import threading
 import time
 import urllib.request
 import webbrowser
-from contextlib import redirect_stdout
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import StringIO
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .. import llm, pipeline, tts
-from ..config import DEFAULT_CONFIG, ROOT, load
+from .. import pipeline, tts
+from ..config import ROOT, load
 
 GUI_DIR = Path(__file__).parent
 UPLOAD_DIR = ROOT / "uploads"
@@ -60,8 +59,12 @@ def _run_job(job_id: str, article_path: str, out_dir: str, opts: dict) -> None:
     try:
         # 把 pipeline 的 stdout 重定向到 job 日志
         class _Wrapped:
-            def write(self, s): log(s); return len(s)
-            def flush(self): pass
+            def write(self, s):
+                log(s)
+                return len(s)
+
+            def flush(self):
+                pass
         old_stdout = sys.stdout
         sys.stdout = _Wrapped()
         try:

@@ -17,3 +17,4 @@ demo/cosyvoice_demo/
 # 配音中间片段（非交付物）
 .voice/
 **/.voice/
+demo/out_*/

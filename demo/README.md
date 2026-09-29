@@ -23,3 +23,17 @@ LLM 首版对话稿被人工核出两处事实瑕疵，已在 `script.json` 修�
 2. 修正后表述与原文一致：「要手脚选腾讯 Marvis、要班组看 MiniMax 和 Kimi Work、要记性选 Hermes Agent；Grok Bot 不作安全边界」。
 
 > 结论：**观点保真不能靠模型自觉，靠人工核稿**——LLM 输出必须过一遍原文比对，这是本项目的铁律。
+
+---
+
+## 冒烟复跑记录（2026-09-29 · 可用性验收）
+
+用来证明「仓库 clone 下来就能跑」，不是成品展示。输入统一是 `samples/sample_article.md`（705 字）。
+
+| 目录 | 路径 | 轮次 | 音频时长 | mp3 | m4a | 端到端耗时 |
+|---|---|---|---|---|---|---|
+| `out_smoke_ollama/` | ollama + qwen3:8b（默认路径） | 26 | 142.6 s | 812 KB | 1.45 MB | 147.9 s |
+| `out_smoke_rule/` | `llm.provider: rule`（无模型降级） | 32 | 187.8 s | 1.01 MB | 1.83 MB | 21.3 s |
+
+口径与上文一致：时长为 `ffprobe format=duration` 回读，耗时为端到端计时（含 LLM 与 TTS）。
+`rule` 路径的作者句是**原文照搬**，不是访谈对话稿，只用于验证链路可跑。

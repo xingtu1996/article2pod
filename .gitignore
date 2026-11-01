@@ -18,3 +18,5 @@ demo/cosyvoice_demo/
 .voice/
 **/.voice/
 demo/out_*/
+
+*.bak
